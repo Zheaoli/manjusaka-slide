@@ -24,17 +24,45 @@
 	<body>
 		<div class="reveal">
 			<div class="slides">
-				<section>Python 3 新特性简析</section>
-				<section data-markdown="markdown/annotation/index.md"
-					data-separator="^\n\n\n"
-					data-separator-vertical="^\n\n"
-					data-separator-notes="^Note:"
-					data-charset="utf-8">
-		   <!--
-			   Note that Windows uses `\r\n` instead of `\n` as its linefeed character.
-			   For a regex that supports all operating systems, use `\r?\n` instead of `\n`.
-		   -->
-	  			</section>
+				<section>
+					<h3 style="font-family: 迷你简启体; color: gray;">Python 3 新特性简析</h3>
+					<ul>
+						<li class="fragment">Type Annotation</li>
+						<li class="fragment">async/await</li>
+					</ul>
+				  
+					<p>
+					  <small>by <a href="https://manjusaka.itscoder.com/">Manjusaka</a> / <a href="https://github.com/Zheaoli">@Manjusaka</a></small>
+					</p>
+				  </section>
+				  <section>
+					  <h3>先聊聊 Type Annotation</h3>
+					  <ul>
+						<li class="fragment">Type Annotation 是什么？</li>
+						<li class="fragment">怎么用 Type Annotation？</li>	
+						<li class="fragment">Type Annotation 有什么好处？</li>				  
+						<li class="fragment">Type Annotation 的发展怎么用？</li>				  
+					  </ul>
+				  </section>
+				  <section>
+					  <h3>一个问题，Python 究竟是强类型语言 or 弱类型语言？</h3>
+				  </section>
+				  <section>
+					  <h3>为了回答这个问题，我们先黑一下 js 吧</h3>
+					  <h4>请问下面两段代码分别输出什么？</h4>
+					  <div class="fragment">
+						  <h4>JavaScript</h4>
+						  <pre><code code data-trim class="javascript">
+console.log("3"/2)
+						  </code></pre>
+					  </div>
+					  <div class="fragment">
+						<h4>Python</h4>
+						<pre><code code data-trim class="python">
+print("3"/2)
+						</code></pre>
+					</div>
+				  </section>
 			</div>
 		</div>
 
