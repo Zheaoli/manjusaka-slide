@@ -1,5 +1,6 @@
 # Python 中的 annotation
 
+
 * Type Annotation 是什么？
 
 * 怎么用 Type Annotation？
