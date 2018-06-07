@@ -63,6 +63,196 @@ print("3"/2)
 						</code></pre>
 					</div>
 				  </section>
+				  <section>
+					  <p>好了，我们都知道 Python 是一门动态强类型语言。现在我们又来玩猜猜</p>
+					  <div class="fragment">
+						  <p>请猜出这段函数参数的类型</p>
+						  <pre><code code data-trim class="python">
+class Flask:
+    def run(self, host=None, port=None, debug=None,
+            load_dotenv=True, **options):
+        # Change this into a no-op if the server is invoked from the
+        # command line. Have a look at cli.py for more information.
+        if os.environ.get('FLASK_RUN_FROM_CLI') == 'true':
+            from .debughelpers import explain_ignored_app_run
+            explain_ignored_app_run()
+            return
+
+        if get_load_dotenv(load_dotenv):
+            cli.load_dotenv()
+
+            # if set, let env vars override previous values
+            if 'FLASK_ENV' in os.environ:
+                self.env = get_env()
+                self.debug = get_debug_flag()
+            elif 'FLASK_DEBUG' in os.environ:
+                self.debug = get_debug_flag()
+
+        # debug passed to method overrides all other sources
+        if debug is not None:
+            self.debug = bool(debug)
+
+        _host = '127.0.0.1'
+        _port = 5000
+        server_name = self.config.get('SERVER_NAME')
+        sn_host, sn_port = None, None
+
+        if server_name:
+            sn_host, _, sn_port = server_name.partition(':')
+
+        host = host or sn_host or _host
+        port = int(port or sn_port or _port)
+
+        options.setdefault('use_reloader', self.debug)
+        options.setdefault('use_debugger', self.debug)
+        options.setdefault('threaded', True)
+
+        cli.show_server_banner(self.env, self.debug, self.name, False)
+
+        from werkzeug.serving import run_simple
+
+        try:
+            run_simple(host, port, self, **options)
+        finally:
+            # reset the first request information if the development server
+            # reset normally.  This makes it possible to restart the server
+            # without reloader and that stuff from an interactive shell.
+            self._got_first_request = False
+						  </code></pre>
+					  </div>
+				  </section>
+				  <section>
+					  <h3>猜一猜 Part2</h3>
+					  <div class="fragment">
+						  <p>请猜一下这段代码的返回类型</p>
+						  <pre><code code data-trim class="python">
+class Flask:
+    @locked_cached_property
+    def name(self):
+        """The name of the application.  This is usually the import name
+        with the difference that it's guessed from the run file if the
+        import name is main.  This name is used as a display name when
+        Flask needs the name of the application.  It can be set and overridden
+        to change the value.
+        .. versionadded:: 0.8
+        """
+        if self.import_name == '__main__':
+            fn = getattr(sys.modules['__main__'], '__file__', None)
+            if fn is None:
+                return '__main__'
+            return os.path.splitext(os.path.basename(fn))[0]
+        return self.import_name
+						  </code></pre>
+					  </div>
+				  </section>
+				  <section>
+					  <h3>猜一猜 Part3</h3>
+					  <div class="fragment">
+						<p>猜一猜这段代码是否正确</p>
+						<pre><code code data-trim class="python">
+def return_callback(flag, callback):
+    if not flag:
+        return None
+    return callback(1, 2)
+						</code></pre>
+					  </div>
+					</section>
+					<section>
+						<h3>我们发现了什么问题？</h3>
+						<div class="fragment">
+							<ul>
+								<li class="fragment">在没有明确的标识情况下，对于我们阅读代码造成一定障碍。只能靠变量名猜类型</li>
+								<li class="fragment">对于 callback 或者其余更多相对复杂的情况下，容易出现调用错误</li>
+							</ul>
+						</div>
+					</section>
+					<section>
+						<h3>怎么解决</h3>
+						<ul>
+							<li class="fragment">写好注释，写好 Docstring</li>
+						</ul>
+						<div class="fragment">
+							<p>比如</p>
+							<pre><code code data-trim class="python">
+class Flask:
+    def run(self, host=None, port=None, debug=None,
+            load_dotenv=True, **options):
+        """
+
+        :param host: str
+        :param port: int
+        :param debug: bool
+        :param load_dotenv: str
+        :param options: dict
+        :return: None
+        """
+        # Change this into a no-op if the server is invoked from the
+        # command line. Have a look at cli.py for more information.
+        if os.environ.get('FLASK_RUN_FROM_CLI') == 'true':
+            from .debughelpers import explain_ignored_app_run
+            explain_ignored_app_run()
+            return
+
+        if get_load_dotenv(load_dotenv):
+            cli.load_dotenv()
+
+            # if set, let env vars override previous values
+            if 'FLASK_ENV' in os.environ:
+                self.env = get_env()
+                self.debug = get_debug_flag()
+            elif 'FLASK_DEBUG' in os.environ:
+                self.debug = get_debug_flag()
+
+        # debug passed to method overrides all other sources
+        if debug is not None:
+            self.debug = bool(debug)
+
+        _host = '127.0.0.1'
+        _port = 5000
+        server_name = self.config.get('SERVER_NAME')
+        sn_host, sn_port = None, None
+
+        if server_name:
+            sn_host, _, sn_port = server_name.partition(':')
+
+        host = host or sn_host or _host
+        port = int(port or sn_port or _port)
+
+        options.setdefault('use_reloader', self.debug)
+        options.setdefault('use_debugger', self.debug)
+        options.setdefault('threaded', True)
+
+        cli.show_server_banner(self.env, self.debug, self.name, False)
+
+        from werkzeug.serving import run_simple
+
+        try:
+            run_simple(host, port, self, **options)
+        finally:
+            # reset the first request information if the development server
+            # reset normally.  This makes it possible to restart the server
+            # without reloader and that stuff from an interactive shell.
+            self._got_first_request = False
+							</code></pre>
+						</div>
+					</section>
+					<section>
+						<h3>但是</h3>
+						<h3 class="fragment">想象很美好</h3>
+					</section>
+					<section>
+						<h3>技术最讨厌的四件事</h3>
+						<ul>
+							<li class="fragment">自己写文档</li>
+							<li class="fragment">自己写注释</li>
+							<li class="fragment">别人不写文档</li>
+							<li class="fragment">别人不写注释</li>
+						</ul>
+					</section>
+					<section>
+						<h3>So<div class="fragment">A better way please?</div></h3>
+					</section>
+					
 			</div>
 		</div>
 
