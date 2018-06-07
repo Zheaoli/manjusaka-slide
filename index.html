@@ -7,7 +7,7 @@
 		<title>Python 新特性简析</title>
 
 		<link rel="stylesheet" href="css/reveal.css">
-		<link rel="stylesheet" href="css/theme/black.css">
+		<link rel="stylesheet" href="css/theme/sky.css">
 
 		<!-- Theme used for syntax highlighting of code -->
 		<link rel="stylesheet" href="lib/css/zenburn.css">
@@ -129,13 +129,6 @@ class Flask:
 class Flask:
     @locked_cached_property
     def name(self):
-        """The name of the application.  This is usually the import name
-        with the difference that it's guessed from the run file if the
-        import name is main.  This name is used as a display name when
-        Flask needs the name of the application.  It can be set and overridden
-        to change the value.
-        .. versionadded:: 0.8
-        """
         if self.import_name == '__main__':
             fn = getattr(sys.modules['__main__'], '__file__', None)
             if fn is None:
@@ -252,7 +245,172 @@ class Flask:
 					<section>
 						<h3>So<div class="fragment">A better way please?</div></h3>
 					</section>
-					
+					<section><a href="https://www.python.org/dev/peps/pep-0484">PEP 484 拯救我们</a></section>
+					<section>
+						<h3>它是什么？</h3>
+						<ul>
+							<li class="fragment">Python 3.5以后所支持的一种新特性</li>
+							<li class="fragment">通过在关键位置增加类型标注来提升代码的可阅读性以及可维护性</li>
+							<li class="fragment">支持复杂类型的标注</li>
+							<li class="fragment">支持第三方工具的静态检查</li>
+							<li class="fragment">提供了接口，可以自行实现运行时检查</li>
+						</ul>
+					</section>
+					<section>
+						<h3>我们来改一下之前的例子：</h3>
+						<pre><code code data-trim class="python">
+class Flask:
+    def run(self, host: str = None, port: int = None, debug: str = None,
+            load_dotenv: str = True, **options):
+        # Change this into a no-op if the server is invoked from the
+        # command line. Have a look at cli.py for more information.
+        if os.environ.get('FLASK_RUN_FROM_CLI') == 'true':
+            from .debughelpers import explain_ignored_app_run
+            explain_ignored_app_run()
+            return
+
+        if get_load_dotenv(load_dotenv):
+            cli.load_dotenv()
+
+            # if set, let env vars override previous values
+            if 'FLASK_ENV' in os.environ:
+                self.env = get_env()
+                self.debug = get_debug_flag()
+            elif 'FLASK_DEBUG' in os.environ:
+                self.debug = get_debug_flag()
+
+        # debug passed to method overrides all other sources
+        if debug is not None:
+            self.debug = bool(debug)
+
+        _host = '127.0.0.1'
+        _port = 5000
+        server_name = self.config.get('SERVER_NAME')
+        sn_host, sn_port = None, None
+
+        if server_name:
+            sn_host, _, sn_port = server_name.partition(':')
+
+        host = host or sn_host or _host
+        port = int(port or sn_port or _port)
+
+        options.setdefault('use_reloader', self.debug)
+        options.setdefault('use_debugger', self.debug)
+        options.setdefault('threaded', True)
+
+        cli.show_server_banner(self.env, self.debug, self.name, False)
+
+        from werkzeug.serving import run_simple
+
+        try:
+            run_simple(host, port, self, **options)
+        finally:
+            # reset the first request information if the development server
+            # reset normally.  This makes it possible to restart the server
+            # without reloader and that stuff from an interactive shell.
+            self._got_first_request = False
+
+						</code></pre>
+					</section>
+					<section>
+						<h3>当然，它也支持复杂的类型标注</h3>
+						<div class="fragment">
+							<p>比如：</p>
+							<pre><code code data-trim class="python">
+import typing
+
+
+def return_callback(flag: bool, callback: typing.Callable[[int, int], int])-> int:
+    if not flag:
+        return None
+    return callback(1, 2)
+							</code></pre>
+						</div>
+						<ul>
+							<li class="fragment">其中 Callback 第一组参数表示可传入的参数，第二组表示返回值的类型</li>
+						</ul>
+					</section>
+					<section>
+						<h3>问题又来了，除了方便阅读，它还能干什么</h3>
+					</section>
+					<section>
+						<h3>可以利用第三方工具进行检查</h3>
+						<p>现在主流的检查工具有三种</p>
+						<ul>
+							<li class="fragment">PyCharm</li>
+							<li class="fragment">MyPy</li>
+							<li class="fragment">Pytype</li>
+						</ul>
+					</section>
+					<section>
+						<p>在 PyCharm 中，如果我们的代码和我们的类型标注存在冲突，PyCharm 会高亮提示我们</p>
+						<div class="fragment"><img src="https://user-images.githubusercontent.com/7054676/41103450-c61754e2-6a9b-11e8-824e-c25302ec87c8.png" alt="PyCharm 提示"></div>
+					</section>
+					<section>
+						<p>同时我们也可以用 mypy/pytype 这样的命令行工具来检查，同时将其集成至 CI 中</p>
+						<div class="fragment"><img src="https://user-images.githubusercontent.com/7054676/41104530-2c265722-6a9e-11e8-8166-31983d7ae482.png" alt="mypy"></div>
+					</section>
+					<section>
+						<p>另外，Annotation 是函数信息的一部分，我们可以通过 inspect 库来获取相关信息</p>
+						<pre><code code data-trim class="python">
+import typing
+import functools
+import inspect
+
+
+def get_annotation(func) -> typing.Callable:
+    @functools.wraps(func)
+    def wraps(*args, **kwargs) -> typing.Any:
+        func_signature = inspect.signature(func)
+        for key, value in func_signature.parameters.items():
+            print(key, value.annotation)
+        return func(*args, **kwargs)
+
+    return wraps
+
+
+@get_annotation
+def return_callback(flag: bool, callback: typing.Callable[[int, int], int]) -> str:
+    if not flag:
+        return None
+    return callback("3", 2)
+
+
+def demo_func(a: int, b: int) -> int:
+    return a + b
+
+
+return_callback(True, demo_func)							
+						</code></pre>
+					</section>
+					<section>
+						与此同时，在 3.5 PEP 484 被引入之后。社区也在不断的迭代，以便与增强 Type Annotation 的适用性
+					</section>
+					<section>
+						<h3><a href="https://www.python.org/dev/peps/pep-0526/">PEP 526: Syntax for Variable Annotations</a></h3>
+						<ul>
+							<li class="fragment">Python 3.6引入</li>
+							<li class="fragment">为变量标注类型</li>
+						</ul>
+					</section>
+					<section>
+					<div class="fragment">
+							<p>我们还是来看代码吧</p>
+							<pre><code code data-trim class="python">
+import typing
+
+
+class DemoClass:
+	attr_value: str
+	user_data: typing.Dict[str, typing.Union[int, str]]
+	status_flag: bool
+							</code></pre>
+						</div>
+						<div class="fragment">
+							<blockquote>Note:这里 user_data 也使用了相对复杂的写法 <br> 通过 typing.Dict 的第一个参数约束字典 Key 的类型，<br> 第二个参数约束字典 Value 的类型</blockquote>
+						</div>
+					</section>
+					<section><a href=""></a></section>
 			</div>
 		</div>
 
