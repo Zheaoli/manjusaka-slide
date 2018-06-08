@@ -478,6 +478,238 @@ demo_func(demo_data)
 
 						</code></pre>
 					</section>
+					<section>
+						<h3>好了我们再来聊聊 async/await 吧</h3>
+					</section>
+					<section>
+						<h3>闲聊 async/await</h3>
+						<ul>
+							<li class="fragment">async/await的迭代史</li>
+							<li class="fragment">聊聊 async/await 的周边与发展</li>
+						</ul>
+					</section>
+					<section>
+						<p>闲聊 async/await 的发展史</p>
+						<ul>
+							<li class="fragment">async/await 是一个全新的东西么？</li>
+							<li class="fragment">官方的 asyncio 库是怎么样运作的？</li>
+						</ul>
+					</section>
+					<section>
+						<a href="https://www.python.org/dev/peps/pep-0255/">Simple Generators</a>
+						<ul>
+							<li class="fragment"><b>语法上和函数类似</b>：生成器函数和常规函数几乎是一样的。它们都是使用 def 语句进行定义，差别在于，生成器使用 yield 语句返回一个值，而常规函数使用 return 语句返回一个值</li>
+							<li class="fragment"><b>自动实现迭代器协议</b>：对于生成器，Python 会自动实现迭代器协议，以便应用到迭代背景中（如 for 循环，sum 函数）。由于生成器自动实现了迭代器协议，所以，我们可以调用它的 next 方法，并且，在没有值可以返回的时候，生成器自动产生 StopIteration 异常</li>
+						</ul>
+					</section>
+					<section>
+							<a href="https://www.python.org/dev/peps/pep-0255/">Simple Generators</a>
+							<ul>
+								<li class="fragment"><b>状态挂起</b>：生成器使用 yield 语句返回一个值。yield 语句挂起该生成器函数的状态，保留足够的信息，以便之后从它离开的地方继续执行</li>
+								<li class="fragment">正是因为有这些特性，Generator 让我们对大量数据的处理有了更好的掌控。</li>
+							</ul>
+					</section>
+					<section>
+						<p>yield 的一个小例子</p>
+						<pre><code code data-trim class="python">
+def fib(number):
+    n, a, b = 0, 0, 1
+    while n < number:
+        yield b
+        a, b = b, a + b
+        n += 1
+
+
+for i in fib(1000000):
+    print(i)
+						</code></pre>
+					</section>
+					<section>
+						<a href="https://www.python.org/dev/peps/pep-0342/">Coroutines via Enhanced Generators</a>
+						<ul>
+							<li class="fragment">第一次在 Python 中引入 coroutine 的概念</li>
+							<li class="fragment">通过引入 send 等方法，让 generator 具备内外数据交流的能力，使的 coroutine 的实现成为现实</li>
+						</ul>
+					</section>
+					<section>
+						<p>一个小例子</p>
+						<pre><code data-trim class="python">
+import time
+
+
+def consumer():
+    r = ''
+    while True:
+        n = yield r
+        if not n:
+            return
+        print('[CONSUMER] Consuming %s...' % n)
+        time.sleep(1)
+        r = '200 OK'
+
+
+def produce(c):
+    next(c)
+    n = 0
+    while n < 5:
+        n = n + 1
+        print('[PRODUCER] Producing %s...' % n)
+        r = c.send(n)
+        print('[PRODUCER] Consumer return: %s' % r)
+    c.close()
+
+
+c = consumer()
+produce(c)
+						</code></pre>
+					</section>
+					<section>
+						<a href="https://www.python.org/dev/peps/pep-0380/">Syntax for Delegating to a Subgenerator</a>
+						<ul>
+							<li class="fragment">Python 3.3 引入</li>
+							<li class="fragment">通过引入 yield from 语法，来优化生成器嵌套时的使用体验。</li>
+						</ul>
+					</section>
+					<section>
+						<p>yield from 的小例子</p>
+						<pre><code data-trim class="python">
+import collections
+
+Result = collections.namedtuple("Result", ["count", "average"])
+
+
+def get_average():
+    total = 0
+    count = 0
+    average = None
+    while True:
+        term = yield
+        if term is None:
+            break
+        total += term
+        count += 1
+        average = total / count
+    return Result(count, average)
+
+
+def grouper(results, key):
+    while True:
+        results[key] = yield from get_average()
+
+
+# 调用方
+def main(data):
+    results = {}
+    for key, values in data.items():
+        group = grouper(results, key)
+        next(group)
+        for value in values:
+            group.send(value)
+        group.send(None)
+    report(results)
+
+
+def report(results):
+    for key, result in sorted(results.items()):
+        group, unit = key.split(';')
+        print('{:2} {:5} averaging {:.2f}{}'.format(result.count, group, result.average, unit))
+
+
+data = {
+    'girls;kg': [40, 41, 42, 43, 44, 54],
+    'girls;m': [1.5, 1.6, 1.8, 1.5, 1.45, 1.6],
+    'boys;kg': [50, 51, 62, 53, 54, 54],
+    'boys;m': [1.6, 1.8, 1.8, 1.7, 1.55, 1.6],
+}
+
+main(data)
+						</code></pre>
+					</section>
+					<section>
+						<a href="https://www.python.org/dev/peps/pep-3156/">Asynchronous IO Support Rebooted</a>
+						<ul>
+							<li class="fragment">Python 3.4 引入</li>
+							<li class="fragment">基于 yield form/yield</li>
+							<li class="fragment">底层驱动可以替换</li>
+						</ul>
+					</section>
+					<section>
+						<p>还还还是一小段代码</p>
+						<pre><code data-trim class="python">
+import asyncio
+
+
+# Notice the decorator!
+@asyncio.coroutine
+def compute(x, y):
+    print("Compute %s + %s ..." % (x, y))
+    # Pause the coroutine for 1 second by yielding from asyncio's built in
+    # sleep coroutine. This simulates the time taken by a non-blocking I/O
+    # call. During this time the event loop can get on with other things.
+    yield from asyncio.sleep(1.0)
+    # Actually return a result!
+    return x + y
+
+
+@asyncio.coroutine
+def print_sum(x, y):
+    # Pause the coroutine until the compute() coroutine has a result.
+    result = yield from compute(x, y)
+    # The following print() function won't be called until there's a result.
+    print("%s + %s = %s" % (x, y, result))
+
+
+# Reference the event loop.
+loop = asyncio.get_event_loop()
+# Start the event loop and continue until print_sum() is complete.
+loop.run_until_complete(print_sum(1, 2))
+# Shut down the event loop.
+loop.close()
+
+						</code></pre>
+					</section>
+					<section>
+						<p>asyncio 的原理</p>
+						<img src="https://user-images.githubusercontent.com/7054676/41167945-022ab9c0-6b77-11e8-947d-a8c66dfda9ae.png" alt="asyncio">
+					</section>
+					<section>
+						<a href="https://www.python.org/dev/peps/pep-0492/">Coroutines with async and await syntax</a>
+						<ul>
+							<li class="fragment">Python 3.5 引入</li>
+							<li class="fragment">引入 async/await 关键字，将 coroutine 和 generator 进行分割。完成语义上的统一</li>
+							<li class="fragment">为后续进一步扩展打下基础，比如异步上下文管理，异步的列表生成式等</li>
+						</ul>
+					</section>
+					<section>
+						<h3>async/await 的现状</h3>
+						<h4 class="fragment">能不能上生产？</h4>
+						<h4 class="fragment">可以！</h4>
+						<h4 class="fragment">适不适合上生产？</h4>
+						<h4 class="fragment">不适合</h4>
+					</section>
+					<section>
+						<h3>Why?</h3>
+					</section>
+					<section>
+						<h3>async/await 的现状</h3>
+						<ul>
+							<li class="fragment">存量代码太大，迁移成本高</li>
+							<li class="fragment">生态不成熟。目前周边几个主流的支撑库都存在着一些缺陷，有些可能会造成非常大影响</li>
+							<li class="fragment">官方的事件驱动循环不完善</li>
+							<li class="fragment">性能和 Gevent 相比没有更为突出的点</li>
+						</ul>
+					</section>
+					<section>
+						<h3>async/await 未来会怎么样？</h3>
+					</section>
+					<section>
+						<img src="https://user-images.githubusercontent.com/7054676/41169344-47229c56-6b7b-11e8-8ce3-b67bb82186b0.png" alt="Python">
+					</section>
+					<section>
+							<h1 style="font-style: italic; font-family: 'IM FELL English';">Thanks!</h1>
+							<h2 style="font-style: italic; font-family: 'IM FELL English';">Q&amp;A</h2>
+						  </section>
+						  
 			</div>
 		</div>
 
