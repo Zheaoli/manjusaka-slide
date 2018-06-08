@@ -401,16 +401,83 @@ import typing
 
 
 class DemoClass:
-	attr_value: str
-	user_data: typing.Dict[str, typing.Union[int, str]]
-	status_flag: bool
+	attr_value: typing.Optional[str]
+	user_data: typing.Optional[typing.Dict[str, typing.Union[int, str]]]
+	status_flag: typing.Optional[bool]
 							</code></pre>
 						</div>
 						<div class="fragment">
 							<blockquote>Note:这里 user_data 也使用了相对复杂的写法 <br> 通过 typing.Dict 的第一个参数约束字典 Key 的类型，<br> 第二个参数约束字典 Value 的类型</blockquote>
 						</div>
 					</section>
-					<section><a href=""></a></section>
+					<section>
+						<a href="https://www.python.org/dev/peps/pep-0563/">Postponed Evaluation of Annotations</a>
+						<ul>
+							<li class="fragment">Python 3.7引入</li>
+							<li class="fragment">Python 4.0将作为默认特性之一</li>
+							<li class="fragment">通过改变 Annotation 的生效时机来加强其易用性</li>
+						</ul>
+					</section>
+					<section>
+						<p>还是来看代码吧</p>
+						<div class="fragment">
+							<pre><code code data-trim class="python">
+from __future__ import annotations
+
+
+class A:
+    def abc(self, data: C) -> C:
+        return data
+
+
+class C:
+    pass
+							</code></pre>
+						</div>
+					</section>
+					<section>
+						<a href="https://www.python.org/dev/peps/pep-0544/"> Protocols: Structural subtyping (static duck typing)</a>
+						<ul>
+							<li class="fragment">原定于 Python 3.7 引入，但是现在依旧处于草案</li>
+							<li class="fragment">虽然处于草案阶段，但是主流的工具已经支持</li>
+							<li class="fragment">可以通过 pip install type_extensions 来使用</li>
+							<li class="fragment">引入 Protocol 的概念，类似于 Golang 中的 interface，允许第三方工具将实现了同一个方法的不同类视为同一类型</li>
+						</ul>
+					</section>
+					<section>
+						<pre><code code data-trim class="python">
+import typing
+import abc
+from typing_extensions import Protocol
+
+
+class BaseProtocol(Protocol):
+    @abc.abstractmethod
+    def close(self):
+        pass
+
+
+class DemoClass1:
+    def close(self):
+        pass
+
+
+class DemoClass2:
+    def close(self):
+        pass
+
+
+def demo_func(data: typing.Iterable[BaseProtocol]):
+    for item in data:
+        item.close()
+
+
+demo_data = [DemoClass1(), DemoClass2()]
+
+demo_func(demo_data)
+
+						</code></pre>
+					</section>
 			</div>
 		</div>
 
